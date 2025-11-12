@@ -1,0 +1,16 @@
+# Framework para la Interfaz Gráfica (GUI)
+customtkinter
+
+# Biblioteca para habilitar Drag and Drop en Tkinter/CustomTkinter
+tkinterdnd2-universal
+
+# Biblioteca para leer y extraer texto de archivos PDF
+PyMuPDF
+
+# Bibliotecas de Google para APIs (Slides, Auth, AI)
+google-api-python-client
+google-auth-oauthlib
+google-auth-httplib2
+
+# Biblioteca estándar para hacer peticiones HTTP (a la API de Gemini)
+requests

@@ -1,0 +1,16 @@
+# Entorno virtual de Python
+venv/
+*.venv/
+.venv/
+
+# Archivos compilados de Python
+__pycache__/
+*.pyc
+
+# Archivo de secretos .env
+.env
+
+# ¡¡Archivos de credenciales de Google!!
+# (Esto soluciona tu error de GitHub)
+credentials.json
+token.json
