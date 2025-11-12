@@ -16,21 +16,19 @@ load_dotenv() # Esto carga las variables del archivo .env
 # --- Configuración Clave ---
 
 # 1. EL PROJECT_ID DE GOOGLE CLOUD
-# ¡¡LÍNEA MODIFICADA!! Ahora lee el .env
 TU_PROJECT_ID = os.getenv("TU_PROJECT_ID")
 
 # 2. Permisos que solicitaremos al usuario
-# Necesitamos permiso para 'presentations' (crear slides)
-# y 'cloud-platform' (usar la IA de Vertex AI)
-SCOPES = ["https://www.googleapis.com/auth/presentations", "https://www.googleapis.com/auth/cloud-platform"]
-
+SCOPES = ["https://www.googleapis.com/auth/presentations", "https://www.googleapis.com/auth/cloud-platform", "https://www.googleapis.com/auth/generative-language"]
 # 3. Archivos de credenciales
 CREDENTIALS_FILE = "credentials.json"  # El JSON que descargaste de Google
 TOKEN_FILE = "token.json"  # Este archivo se CREARÁ automáticamente
 
-# 4. Configuración de la IA (Gemini 1.5 Flash)
-# Usamos el endpoint de Vertex AI
-API_ENDPOINT = f"https://us-central1-aiplatform.googleapis.com/v1/projects/{TU_PROJECT_ID}/locations/us-central1/publishers/google/models/gemini-1.5-flash-001:generateContent"
+# 4. Configuración de la IA
+# ¡¡¡PLAN D: Usamos la API "Generative Language" (v1beta)!!!
+# Esta es una API diferente que no depende de la región del proyecto.
+# Usaremos 'gemini-1.5-flash-latest' que es más probable que esté disponible.
+API_ENDPOINT = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent"
 
 
 class SlideGenerator:
@@ -55,6 +53,14 @@ class SlideGenerator:
         """
         # Si ya tenemos credenciales válidas, no hacemos nada
         if self.creds and self.creds.valid:
+            # PERO, necesitamos re-construir los headers si no existen
+            if not self.auth_headers:
+                self.auth_headers = {
+                    "Authorization": f"Bearer {self.creds.token}",
+                    "Content-Type": "application/json"
+                }
+            if not self.slides_service:
+                 self.slides_service = build("slides", "v1", credentials=self.creds)
             return True
             
         print("Iniciando autenticación...")
@@ -90,7 +96,7 @@ class SlideGenerator:
             # 1. El servicio para la API de Google Slides
             self.slides_service = build("slides", "v1", credentials=self.creds)
             
-            # 2. La cabecera (header) para la API de Vertex AI (Gemini)
+            # 2. La cabecera (header) para la API de Gemini
             self.auth_headers = {
                 "Authorization": f"Bearer {self.creds.token}",
                 "Content-Type": "application/json"
@@ -123,7 +129,7 @@ class SlideGenerator:
 
     def get_presentation_content(self, pdf_text):
         """
-        Envía el texto extraído del PDF a la API de Gemini (Vertex AI).
+        Envía el texto extraído del PDF a la API de Gemini (Generative Language).
         """
         if not self.auth_headers or TU_PROJECT_ID is None:
             print("Error: El PROJECT_ID no está configurado (revisa tu .env) o la autenticación falló.")
@@ -176,11 +182,19 @@ class SlideGenerator:
             }
         }
 
-        print("Enviando texto a la IA para análisis...")
+        print("Enviando texto a la IA para análisis (Usando Generative Language API)...")
         
         try:
-            # Hacemos la llamada POST a la API de Vertex AI
-            response = requests.post(API_ENDPOINT, headers=self.auth_headers, json=payload, timeout=90)
+            # Hacemos la llamada POST a la API
+            # ¡¡NOTA!! La URL de esta API es diferente y lleva el Project ID
+            # como un "header" (encabezado) adicional.
+            
+            # Copiamos los headers de autenticación
+            api_headers = self.auth_headers.copy()
+            # Añadimos el header específico que pide esta API
+            api_headers['x-goog-user-project'] = TU_PROJECT_ID
+
+            response = requests.post(API_ENDPOINT, headers=api_headers, json=payload, timeout=90)
             
             # Manejar errores de la API
             if response.status_code != 200:
