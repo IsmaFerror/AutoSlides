@@ -180,7 +180,8 @@ class SlideGenerator:
             "generationConfig": {
                 "responseMimeType": "application/json", # ¡Le pedimos JSON directamente!
                 "temperature": 0.5,
-                "maxOutputTokens": 2048
+                # Aumentamos el límite de tokens para que la IA no se corte
+                "maxOutputTokens": 8192
             }
         }
 
