@@ -27,7 +27,7 @@ CREDENTIALS_FILE = "credentials.json"  # El JSON que descargaste de Google
 TOKEN_FILE = "token.json"  # Este archivo se CREARÁ automáticamente
 
 # 4. Configuración de la IA
-# ¡¡¡LA SOLUCIÓN QUE TÚ ENCONTRASTE!!!
+# ¡¡LA SOLUCIÓN QUE TÚ ENCONTRASTE!!
 # Región "global" y modelo "gemini-2.5-pro"
 API_ENDPOINT = f"https://aiplatform.googleapis.com/v1/projects/{TU_PROJECT_ID}/locations/global/publishers/google/models/gemini-2.5-pro:generateContent"
 
@@ -174,7 +174,6 @@ class SlideGenerator:
         # Preparamos el "payload" para la API de Gemini
         payload = {
             "contents": [
-                # ¡¡¡ESTA ES LA LÍNEA CORREGIDA!!!
                 # Añadimos "role": "user" para el modelo gemini-2.5-pro
                 {"role": "user", "parts": [{"text": prompt}]}
             ],
@@ -255,8 +254,12 @@ class SlideGenerator:
                     "slideLayoutReference": {
                         "predefinedLayout": "TITLE_SLIDE"
                     },
+                    # --- ¡¡AQUÍ ESTÁ LA CORRECCIÓN!! ---
+                    # El layout TITLE_SLIDE requiere mapear AMBOS placeholders
+                    # (el título y el subtítulo) aunque no usemos el subtítulo.
                     "placeholderIdMappings": [
                         {"layoutPlaceholder": {"type": "CENTERED_TITLE"}, "objectId": "title_slide_title"},
+                        {"layoutPlaceholder": {"type": "SUBTITLE"}, "objectId": "title_slide_subtitle"}
                     ]
                 }
             })
@@ -267,6 +270,7 @@ class SlideGenerator:
                     "text": ai_data["titulo_presentacion"]
                 }
             })
+            # (No insertamos texto en "title_slide_subtitle", pero ya está mapeado)
 
             # 4. Iterar y crear las diapositivas de Puntos Clave
             slide_count = 1
