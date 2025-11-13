@@ -19,16 +19,17 @@ load_dotenv() # Esto carga las variables del archivo .env
 TU_PROJECT_ID = os.getenv("TU_PROJECT_ID")
 
 # 2. Permisos que solicitaremos al usuario
-SCOPES = ["https://www.googleapis.com/auth/presentations", "https://www.googleapis.com/auth/cloud-platform", "https://www.googleapis.com/auth/generative-language"]
+# Estos son los scopes correctos
+SCOPES = ["https://www.googleapis.com/auth/presentations", "https://www.googleapis.com/auth/cloud-platform"]
+
 # 3. Archivos de credenciales
 CREDENTIALS_FILE = "credentials.json"  # El JSON que descargaste de Google
 TOKEN_FILE = "token.json"  # Este archivo se CREARÁ automáticamente
 
 # 4. Configuración de la IA
-# ¡¡¡PLAN D: Usamos la API "Generative Language" (v1beta)!!!
-# Esta es una API diferente que no depende de la región del proyecto.
-# Usaremos 'gemini-1.5-flash-latest' que es más probable que esté disponible.
-API_ENDPOINT = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent"
+# ¡¡¡LA SOLUCIÓN QUE TÚ ENCONTRASTE!!!
+# Región "global" y modelo "gemini-2.5-pro"
+API_ENDPOINT = f"https://aiplatform.googleapis.com/v1/projects/{TU_PROJECT_ID}/locations/global/publishers/google/models/gemini-2.5-pro:generateContent"
 
 
 class SlideGenerator:
@@ -53,7 +54,7 @@ class SlideGenerator:
         """
         # Si ya tenemos credenciales válidas, no hacemos nada
         if self.creds and self.creds.valid:
-            # PERO, necesitamos re-construir los headers si no existen
+            # Re-construir servicios si no existen (necesario si la app sigue abierta)
             if not self.auth_headers:
                 self.auth_headers = {
                     "Authorization": f"Bearer {self.creds.token}",
@@ -129,7 +130,7 @@ class SlideGenerator:
 
     def get_presentation_content(self, pdf_text):
         """
-        Envía el texto extraído del PDF a la API de Gemini (Generative Language).
+        Envía el texto extraído del PDF a la API de Gemini (Vertex AI).
         """
         if not self.auth_headers or TU_PROJECT_ID is None:
             print("Error: El PROJECT_ID no está configurado (revisa tu .env) o la autenticación falló.")
@@ -173,7 +174,9 @@ class SlideGenerator:
         # Preparamos el "payload" para la API de Gemini
         payload = {
             "contents": [
-                {"parts": [{"text": prompt}]}
+                # ¡¡¡ESTA ES LA LÍNEA CORREGIDA!!!
+                # Añadimos "role": "user" para el modelo gemini-2.5-pro
+                {"role": "user", "parts": [{"text": prompt}]}
             ],
             "generationConfig": {
                 "responseMimeType": "application/json", # ¡Le pedimos JSON directamente!
@@ -182,19 +185,11 @@ class SlideGenerator:
             }
         }
 
-        print("Enviando texto a la IA para análisis (Usando Generative Language API)...")
+        print("Enviando texto a la IA para análisis (Vertex AI)...")
         
         try:
-            # Hacemos la llamada POST a la API
-            # ¡¡NOTA!! La URL de esta API es diferente y lleva el Project ID
-            # como un "header" (encabezado) adicional.
-            
-            # Copiamos los headers de autenticación
-            api_headers = self.auth_headers.copy()
-            # Añadimos el header específico que pide esta API
-            api_headers['x-goog-user-project'] = TU_PROJECT_ID
-
-            response = requests.post(API_ENDPOINT, headers=api_headers, json=payload, timeout=90)
+            # Hacemos la llamada POST a la API de Vertex AI
+            response = requests.post(API_ENDPOINT, headers=self.auth_headers, json=payload, timeout=90)
             
             # Manejar errores de la API
             if response.status_code != 200:
